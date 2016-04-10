@@ -6,15 +6,19 @@
 #include "queue.h"
 
 
-#define HOST 0
-#define SWITCH 1
-#define LINK 2
+#define HOST 10
+#define SWITCH 12
+#define LINK 99
+#define SERVER 4
+#define SINK 5
 
-#define CORE_SWITCH 10
+#define CORE_SWITCH 13
 #define AGG_SWITCH 11
+#define EPS 40        
 
 #define COPPER_LINK 20
 #define FIBER_LINK 21
+#define SIMPLE_LINK 22
 
 using namespace std;
 
@@ -27,10 +31,28 @@ class Node {
 
 class Host : public Node {
     public:
-        Host(uint32_t id, double rate, uint32_t queue_type, uint32_t host_type);
-        Queue *queue;
+        Host(uint32_t id, double rate, uint32_t queue_size, uint32_t queue_type, uint32_t host_type, int location, uint32_t input_bus_width, uint32_t input_work_rate, uint32_t output_bus_width, uint32_t output_work_rate, uint32_t nqph);
+        std::vector<Queue *> queue;
+        //Queue *queue;
         int host_type;
+//	typenid *node_details;
 };
+
+class Sink : public Node {
+    public:
+        Sink(uint32_t id, uint32_t sink_type);
+        int sink_type;
+};
+
+class SimpleSink : public Sink {
+    public:
+	Queue::typenid node_details;
+        SimpleSink(uint32_t id);
+        //void set_src_dst(Node *src, Node *dst);
+        void set_src_dst(Queue::typenid src, Queue::typenid dst);
+	void printdetails();
+};
+
 
 class Link : public Node {
     public:
@@ -49,6 +71,17 @@ class FiberLink : public Link {
         FiberLink(uint32_t id, double rate, uint32_t queue_type);
 };
 
+class SimpleLink : public Link {
+    public:
+	Queue::typenid node_details;
+        SimpleLink(uint32_t id);
+        void set_src_dst(Queue::typenid src, Queue::typenid dst);
+        void set_delay(double td, double pd);
+        double pd, td, totd;
+        uint32_t src_id, dst_id, src_type, dst_type;
+};
+
+
 
 class Switch : public Node {
     public:
@@ -56,6 +89,13 @@ class Switch : public Node {
         uint32_t switch_type;
         std::vector<Queue *> queues;
 };
+
+class Eps: public Switch 
+{
+	public:
+		Eps(uint32_t id, uint32_t nq, double rate, uint32_t queue_type);
+};
+
 
 
 class CoreSwitch: public Switch 

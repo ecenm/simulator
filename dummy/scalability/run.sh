@@ -46,15 +46,13 @@
 
 # change pkt_size and work_rate iteratively
 
-gnuplot -e "datafile='queue_0.log'; 
-            mytitle = 'Stats (pkt_size: 64 B, output_work_rate: 10, more details in Table 1)';
-            outputname='stats_64_work_rate_10.jpg';
-            x_label='Packet entering time';
-            y_label='Packet Latency (Last bit entering to exiting)';
-            y2_label='# of packets';
-            parameter1='Packet Latency (y1)';            
-            parameter2='Packets Dropped (y2)'; 
-            parameter3='Queue Size (y2)'
+gnuplot -e "datafile='ts.txt'; 
+            mytitle = 'Simulation time Vs Number of queues in system';
+            outputname='scalability.jpg';
+            x_label='Number of queues in the system';
+            y_label='Simulation time (in seconds)';
+            parameter1='# of packets = 100';            
+            parameter2='# of packets = 1000'; 
             " scriptv2.plt 
 
 #gnuplot -e "datafile='qplot.txt'; 

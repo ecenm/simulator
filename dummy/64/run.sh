@@ -46,16 +46,66 @@
 
 # change pkt_size and work_rate iteratively
 
-gnuplot -e "datafile='queue_0.log'; 
-            mytitle = 'Stats (pkt_size: 64 B, output_work_rate: 10, more details in Table 1)';
-            outputname='stats_64_work_rate_10.jpg';
+#gnuplot -e "datafile='queue_0.log'; 
+#            mytitle = 'Stats (pkt_size: 64 B, output_work_rate: 10, more details in Table 1)';
+#            outputname='stats_64_work_rate_10.jpg';
+#            x_label='Packet entering time';
+#            y_label='Packet Latency (Last bit entering to exiting)';
+#            y2_label='# of packets';
+#            parameter1='Packet Latency (y1)';            
+#            parameter2='Packets Dropped (y2)'; 
+#            parameter3='Queue Size (y2)'
+#            " scriptv2.plt 
+
+
+gnuplot -e "datafile='queue_1.log'; 
+            mytitle = 'Packet Latency Vs Packet Entering time (pkt_size: 1024 B), host 0 to host 1';
+            outputname='stats_1024_work_rate_10.jpg';
             x_label='Packet entering time';
             y_label='Packet Latency (Last bit entering to exiting)';
-            y2_label='# of packets';
-            parameter1='Packet Latency (y1)';            
-            parameter2='Packets Dropped (y2)'; 
-            parameter3='Queue Size (y2)'
+            parameter1='Packet Latency'            
             " scriptv2.plt 
+
+gnuplot -e "datafile='1000.log'; 
+            mytitle = 'Host 0 Stats (pkt_size: 1024 B, input_arrival_rate: 10, output_service_rate: 10)';
+            outputname='host_0_stats.jpg';
+            x_label='Packet entering time';
+            y_label='# of packets (y1)';           
+            y2_label='# of packets (y2)';
+            parameter2='Queue Size (y1)'; 
+            parameter3='Packets Dropped (y2)'
+            " script_host0.plt 
+
+gnuplot -e "datafile='1010.log'; 
+            mytitle = 'Host 1 Stats (pkt_size: 1024 B, input_arrival_rate: 10, output_service_rate: 4)';
+            outputname='host_1_stats.jpg';
+            x_label='Packet entering time';
+            y_label='# of packets (y1)';           
+            y2_label='# of packets (y2)';
+            parameter2='Queue Size (y1)'; 
+            parameter3='Packets Dropped (y2)'
+	    " script_host1.plt
+
+gnuplot -e "datafile='4000.log'; 
+            mytitle = 'Switch Queue 0 Stats (pkt_size: 1024 B, input_arrival_rate: 10, output_service_rate: 10)';
+            outputname='switch_queue_0_stats.jpg';
+            x_label='Packet entering time';
+            y_label='# of packets (y1)';           
+            y2_label='# of packets (y2)';
+            parameter2='Queue Size (y1)'; 
+            parameter3='Packets Dropped (y2)'
+            " script_switch_q_0.plt 
+
+gnuplot -e "datafile='4001.log'; 
+            mytitle = 'Switch Queue 1 Stats (pkt_size: 1024 B, input_arrival_rate: 10, output_service_rate: 4)';
+            outputname='switch_queue_1_stats.jpg';
+            x_label='Packet entering time';
+            y_label='# of packets (y1)';           
+            y2_label='# of packets (y2)';
+            parameter2='Queue Size (y1)'; 
+            parameter3='Packets Dropped (y2)'
+	        " script_switch_q_1.plt
+
 
 #gnuplot -e "datafile='qplot.txt'; 
 #            mytitle = 'Queue Stats (Packet size = 64 Bytes, Arrival Rate = 5 pkts/sec, Schedule Rate = 2 pkts/sec) [ES]';

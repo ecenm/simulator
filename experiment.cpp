@@ -26,7 +26,8 @@
 
 extern Topology *topology;
 extern double current_time;
-extern std::priority_queue<event*, std::vector<event*>, EventComparator> event_queue;
+//extern std::priority_queue<event*, std::vector<event*>, EventComparator> event_queue;
+extern std::priority_queue<event*, std::vector<event*>, EventComparator<event> > event_queue;
 extern std::deque<Packet*> packets_to_schedule;
 //extern std::vector<Packet*> packets_to_switch; // My declaration
 std::deque<Packet*> packets;
@@ -78,8 +79,8 @@ void run_experiment(int argc, char **argv, uint32_t exp_type) {
     if (params.simple_topology == 1) {
         topology = new SimpleTopology(params.num_hosts, params.bandwidth, params.queue_type, params.num_hosts);
     }    
-//    std::cout << "Number of Hosts is : " << topology->num_hosts<<std::endl;
 
+    //std::cout << "Number of Hosts is : " << topology->num_hosts<<std::endl;
     for(int i=0;i<params.num_hosts;i++){
             packets_for_rx_stat.push_back(vector<Packet*>());  
             packets_for_tx_stat.push_back(vector<Packet*>());  
@@ -144,14 +145,17 @@ void run_experiment(int argc, char **argv, uint32_t exp_type) {
    std::cout<<" "<< std::endl;
    //double arrival_time_unit = 1.0/params.arrival_rate; old way
 
-
+    add_to_event_queue(new StatsEvent (0));
+ 
 // for :(iterates over queues)
-  for (int j=0;j<params.num_hosts;j++){ 
+  for (int j=0;j<1;j++){ // testing for single queue chaining
+  //for (int j=0;j<params.num_hosts;j++){ 
    for (uint32_t i = 0; i < params.num_packets_to_run; i++){
 
     double new_arrival_event = new_arrival_event+arrival_time_unit;
 
-    Packet *p1 = new Packet(start_time, i, 0, params.packet_size, topology->hosts[0], topology->hosts[0]);
+//   std::cout<<"-------------------------------------------> "<< std::endl;
+    Packet *p1 = new Packet(start_time, i, 0, params.packet_size, topology->hosts[0], topology->hosts[1]);
     p1->start_time = 0 ;
     p1->end_time =0 ;
     p1->qid=j; // encoding the identification of queue for packet
@@ -167,8 +171,8 @@ void run_experiment(int argc, char **argv, uint32_t exp_type) {
     //tnext = tnext;
     
 
-    add_to_event_queue(new PacketPushingEvent(new_arrival_event, p1));
-
+    add_to_event_queue(new PacketPushingEvent(new_arrival_event, p1, topology->hosts[j]->queue[0]));
+    //std::cout << topology->hosts[j]->queue[0]->node_details.my_type << std::endl;
     
     
     if(params.debug==1){
@@ -177,9 +181,8 @@ void run_experiment(int argc, char **argv, uint32_t exp_type) {
 	
 	}
 }
-    add_to_event_queue(new StatsEvent (0));
-    add_to_event_queue(new LoggingEvent (1e10));
-    run_scenario();
+    add_to_event_queue(new LoggingEvent (200000000));
+   run_scenario();
 
 }
 

@@ -6,12 +6,14 @@
 
 
 extern Topology* topology;
-extern std::priority_queue<event*, std::vector<event*>, EventComparator> event_queue;
+//extern std::priority_queue<event*, std::vector<event*>, EventComparator> event_queue;
+extern std::priority_queue<event*, std::vector<event*>, EventComparator<event> > event_queue;
 extern double current_time;
 extern std::deque<event*> packet_arrivals;
 extern std::deque<Packet*> packets_to_schedule;
 extern std::vector<Packet*> packets_for_rx_stats;
 extern std::vector<Packet*> packets_for_tx_stats;
+std::vector<Queue::typenid > typenidvector;
 
 // Parametrized data structures that are fetched from experiment.cpp
 
@@ -155,9 +157,11 @@ void PacketCreationEvent::process_event(){
 
 PacketPushingEvent::PacketPushingEvent(
 	double time, 
-	Packet *packet
+	Packet *packet,
+    Queue *queue
 	): event(PACKET_PUSHING_EVENT, time) {
     this->packet = packet;
+    this->queue = queue;
 	// Have to write my code here
 
 	}
@@ -172,40 +176,91 @@ void PacketPushingEvent::process_event(){
     uint32_t time_to_deque;
 
    double new_arrival_event = packet->starting_time;
-   uint32_t q_id = packet->qid;
+   uint32_t node_type = queue->node_details.my_type;
+   uint32_t node_id = queue->node_details.my_id;
+   uint32_t q_id = queue->node_details.my_sub_id;
+   //std::cout << queue->node_details.my_type <<"\t"<< node_id << "\t" << q_id << std::endl;
    uint32_t size = packets_to_switch[q_id].size();
 
    // Input side
-   double input_packet_size_in_time = (1.0/double(params.input_work_rate))* ceil(double(params.packet_size)/double(params.input_bus_width));
+   double input_packet_size_in_time = (1.0/double(queue->input_work_rate))* ceil(double(packet->size)/double(queue->input_bus_width));
    double arrival_time_unit = input_packet_size_in_time;
+   //std::cout << "arrival_time_unit : "<< arrival_time_unit << std::endl;
     // Output side
-   double output_packet_size_in_time = (1.0/double(params.output_work_rate))* ceil(double(params.packet_size)/double(params.output_bus_width));
+   double output_packet_size_in_time = (1.0/double(queue->output_work_rate))* ceil(double(packet->size)/double(queue->output_bus_width));
    double service_time_unit = output_packet_size_in_time;
+   //std::cout << "service_time_unit : "<< service_time_unit << std::endl;
+
+/*    std::cout << "Inside packet creation event" << std::endl;
+    std::cout<< topology->hosts[0]->queue->node_details.src_type << std::endl;
+    std::cout<< topology->hosts[0]->queue->node_details.src_id   << std::endl;
+    std::cout<< topology->hosts[0]->queue->node_details.dst_type << std::endl ;
+    std::cout<< topology->hosts[0]->queue->node_details.dst_id   << std::endl;
+    std::cout<< topology->hosts[0]->queue->node_details.my_type  << std::endl;
+    std::cout<< topology->hosts[0]->queue->node_details.my_id    << std::endl;
+
+
+    std::cout<< topology->hosts[1]->queue->node_details.src_type << std::endl;
+    std::cout<< topology->hosts[1]->queue->node_details.src_id   << std::endl;
+    std::cout<< topology->hosts[1]->queue->node_details.dst_type << std::endl ;
+    std::cout<< topology->hosts[1]->queue->node_details.dst_id   << std::endl;
+    std::cout<< topology->hosts[1]->queue->node_details.my_type  << std::endl;
+    std::cout<< topology->hosts[1]->queue->node_details.my_id    << std::endl;
+
+
+    std::cout<< topology->slinks[0]->node_details.src_type << std::endl;
+    std::cout<< topology->slinks[0]->node_details.src_id   << std::endl ;
+    std::cout<< topology->slinks[0]->node_details.dst_type << std::endl;
+    std::cout<< topology->slinks[0]->node_details.dst_id   << std::endl;
+    std::cout<< topology->slinks[0]->node_details.my_type  << std::endl;
+    std::cout<< topology->slinks[0]->node_details.my_id   << std::endl;
+
+    std::cout << "Exiting packet creation event" << std::endl;*/
+
 
  
    packet->start_time = get_current_time(); //TODO Start time 
    packet->fbe_time = get_current_time();
    packet->lbe_time = packet->fbe_time + input_packet_size_in_time;
-     
-   //std::cout << packet->fbe_time << "\t" << packet->lbe_time << std::endl;
-   packet->qsize_we = topology->myq[q_id]->packets_in_queue; //TODO Start time 
-   packet->dropped_pkts_we = topology->myq[q_id]->packets_dropped; //TODO Start time 
-//std::cout<< packet->start_time << std::endl;  //TODO Printing Start time 
-	    topology->myq[q_id]->enque(packet);
-	    packet_pushed[q_id] ++;
-   std::cout<< "a\t" << q_id << "\t" << get_current_time() <<"\t" << topology->myq[q_id]->bytes_in_queue << "\t" << topology->myq[q_id]->packets_in_queue<<"\t" << topology->myq[q_id]->bytes_dropped<<"\t" << topology->myq[q_id]->packets_dropped <<std::endl;
+   packet->qsize_we = queue->packets_in_queue; //TODO Start time 
+   packet->dropped_pkts_we = queue->packets_dropped; //TODO Start time 
+
+    //std::cout << packet->src->id << std::endl;
+    //std::cout << queue->node_details.src_type << std::endl;
+  
+  if((queue->node_details.my_id == packet->src->id) && (queue->node_details.src_type == HOST)){
+   //std::cout<<"Packet Pushing Event"<<std::endl; 
+    //std::cout << "---------------------------------------->" << std::endl;
+   packet->m_fbe_time = get_current_time();
+   packet->m_lbe_time = packet->m_fbe_time + input_packet_size_in_time;
+  // std::cout<<"\t"<<packet->m_fbe_time << "\t" << packet->m_lbe_time << std::endl;
  
 
+
+   //std::cout << packet->fbe_time << "\t" << packet->lbe_time << std::endl;
+//std::cout<< packet->start_time << std::endl;  //TODO Printing Start time 
+	}
+   else if((queue->node_details.my_id == packet->dst->id) && (queue->node_details.src_type == HOST)) {
+	std::cout << "Approaching destination "<< std::endl;
+
+	}
+
+	    queue->enque(packet);
+	    packet_pushed[q_id] ++;
+   std::cout<< "a\t" << node_type << node_id << q_id << "\t" << get_current_time() <<"\t" << queue->bytes_in_queue << "\t" << queue->packets_in_queue<<"\t" << queue->bytes_dropped<<"\t" << queue->packets_dropped <<std::endl;
+   //std::cout<< "a\t" << node_type << "\t" << node_id << "\t" << q_id << "\t" << get_current_time() <<"\t" << queue->bytes_in_queue << "\t" << queue->packets_in_queue<<"\t" << queue->bytes_dropped<<"\t" << queue->packets_dropped <<std::endl;
+ 
+//std::cout <<"q_id "<<q_id << " packets to switch " << packets_to_switch[q_id].size() << std::endl;
     if (packets_to_switch[q_id].size() == 0){
           double first_packet_leaving = packet->lbe_time + output_packet_size_in_time ;
-          std::cout<< "****" <<first_packet_leaving << "=" << packet->lbe_time << "+" << output_packet_size_in_time << std::endl ;
+        // std::cout<< "\t"<< "****" <<first_packet_leaving << "=" << packet->lbe_time << "+" << output_packet_size_in_time << std::endl ;
 
            packet->departure_time = first_packet_leaving;
            packet->lbl_time = first_packet_leaving;
            packets_to_switch[q_id].push_back(packet); 
            no_of_packets_tracker[q_id]++;
            new_token_event = first_packet_leaving; 
-           add_to_event_queue(new PacketServiceEvent(first_packet_leaving, packet));
+           add_to_event_queue(new PacketServiceEvent(first_packet_leaving, packet, queue));
     }
    
     else 
@@ -215,31 +270,33 @@ void PacketPushingEvent::process_event(){
       
         //std::cout << packets_to_switch[q_id][no_of_packets_tracker[q_id]-1]->lbl_time << ">"<< packet->fbe_time << std::endl;
 	if(params.output_work_rate>=params.input_work_rate){
-	std::cout<<"Cunningggggggggggggggggggggggggggggggggggggggg"<<std::endl;
+	//std::cout<<"Cunningggggggggggggggggggggggggggggggggggggggg"<<std::endl;
         new_token_event = packets_to_switch[q_id][no_of_packets_tracker[q_id]-1]->lbl_time + (packet->lbe_time - packets_to_switch[q_id][no_of_packets_tracker[q_id]-1]->lbl_time) + output_packet_size_in_time; 
 		}
 	else
 	{
-	std::cout<<"Normallllllllllllllllllllllllllllllllllllllllll"<<std::endl;
+	//std::cout<<"Normallllllllllllllllllllllllllllllllllllllllll"<<std::endl;
 	 new_token_event = packets_to_switch[q_id][no_of_packets_tracker[q_id]-1]->lbl_time + output_packet_size_in_time ;
+	//std::cout << new_token_event << std::endl;
 	}
-        std::cout<<"*************************************************>" << std::endl;
+        //std::cout<<"*************************************************>" << std::endl;
             // std::cout<<"past "<<packets_to_switch[q_id][no_of_packets_tracker[q_id]-1]->departure_time << " > " << "get_current_time " << get_current_time() << std::endl; 
           }
      else{
-              std::cout<<"-------------------------------------->" << std::endl;
+              //std::cout<<"=============================================>" << std::endl;
               new_token_event = packet->fbe_time+ input_packet_size_in_time + output_packet_size_in_time ;
               //new_token_event = packet->fbe_time +  input_packet_size_in_time ;
+		std::cout << new_token_event << std::endl;
           }
 
            packet->lbl_time = new_token_event ;
-           std::cout<<"new_token_event "<< new_token_event<< std::endl;
+           //std::cout<< "\t"<<"new_token_event "<< new_token_event<< std::endl;
            packets_to_switch[q_id].push_back(packet);
              
              
            no_of_packets_tracker[q_id]++;
 
-           add_to_event_queue(new PacketServiceEvent(new_token_event, packet)); 
+           add_to_event_queue(new PacketServiceEvent(new_token_event, packet, queue)); 
  
 
     }
@@ -249,9 +306,11 @@ void PacketPushingEvent::process_event(){
 
 PacketServiceEvent::PacketServiceEvent(
 	double time, 
-	Packet *packet
+	Packet *packet,
+    Queue *queue
 	): event(PACKET_SERVICE_EVENT, time) {
     this->packet = packet;
+    this->queue = queue;
 	// Have to write my code here
 
 	}
@@ -261,169 +320,341 @@ PacketServiceEvent::~PacketServiceEvent(){}
 
 void PacketServiceEvent::process_event(){
 
+    uint32_t node_type = queue->node_details.my_type;
+    uint32_t node_id = queue->node_details.my_id;
+    uint32_t q_id = queue->node_details.my_sub_id; 
+    uint32_t finish = 0;
+    Queue::typenid hostdetails ;
+// std::cout << "Packet Service Event"<< std::endl;
    double output_packet_size_in_time = (1.0/double(params.output_work_rate))* ceil(double(params.packet_size)/double(params.output_bus_width));
     if(params.debug==1){
-    std::cout<< get_current_time() <<" : <--- Packet Service Event "<< packet->seq_no << std::endl;
     }
-
-    // Write code here
-//	for (uint32_t i=0;i<params.schedule_rate;i++) {
-    uint32_t q_id = packet->qid;
-    if(topology->myq[q_id]->bytes_in_queue !=0) //&& tokens[q_id] != 0)
-		{
-			Packet* dequed_pkt = topology->myq[q_id]->deque();
-            tokens[q_id]--;
-            //std::cout <<" : <--- Check " << std::endl;
-            dequed_pkt->end_time = get_current_time(); //TODO Start time
-            dequed_pkt->lbl_time = get_current_time(); //TODO Start time
-            dequed_pkt->fbl_time = get_current_time() - output_packet_size_in_time; //TODO Start time
-	        dequed_pkt->qsize_wl =  topology->myq[q_id]->packets_in_queue;
-            dequed_pkt->dropped_pkts_wl = topology->myq[q_id]->packets_dropped; //TODO Start time 
-
     
-            packets_for_rx_stat[q_id].push_back(dequed_pkt);
-            if(params.debug==1){
-            std::cout<< get_current_time() <<" : <--- Packet dequed "<< dequed_pkt->seq_no << std::endl;
-            }
+    if(queue->bytes_in_queue !=0) //&& tokens[q_id] != 0)
+		{
+			Packet* dequed_pkt = queue->deque();
+		
+		   if(packet->dst->id == queue->node_details.my_id) {
+                     packet->m_lbl_time = get_current_time();
+                     packet->m_fbl_time = get_current_time() - output_packet_size_in_time;
+		     finish = 1;
+			}
 
-            }
+                     packet->end_time = get_current_time(); //TODO Start time
+                     packet->lbl_time = get_current_time(); //TODO Start time
+                     packet->fbl_time = get_current_time() - output_packet_size_in_time; 
+	                 packet->qsize_wl =  topology->hosts[node_id]->queue[q_id]->packets_in_queue;
+                     packet->dropped_pkts_wl =topology->hosts[node_id]->queue[q_id]->packets_dropped;  
+		     packets_for_rx_stat[q_id].push_back(packet);
+
+   std::cout<< "d\t" << node_type << node_id << q_id << "\t"<< get_current_time()<<"\t" << queue->bytes_in_queue << "\t" << queue->packets_in_queue<<"\t" << queue->bytes_dropped<<"\t" << queue->packets_dropped <<std::endl;
+   //std::cout<< "d\t" << node_type << "\t" << node_id << "\t" << q_id << "\t"<< get_current_time()<<"\t" << topology->hosts[node_id]->queue[q_id]->bytes_in_queue << "\t" << topology->hosts[node_id]->queue[q_id]->packets_in_queue<<"\t" << topology->hosts[node_id]->queue[q_id]->bytes_dropped<<"\t" << topology->hosts[node_id]->queue[q_id]->packets_dropped <<std::endl;
+
+  // std::cout << queue->node_details.my_type <<"\t"<< node_id << "\t" << q_id << std::endl;
+   //std::cout << node_id << "\t" << q_id << std::endl;
+                       //std::cout << "\t" << "packet->dst->id : " << packet->dst->id <<" hostdetails.dst_id : "<< hostdetails.dst_id << " hostdetails.dst_type : "<< hostdetails.dst_type << std::endl;
+		    //std::cout <<"\t" <<dequed_pkt->dst->id << "\t"<< queue->id<< std::endl;
+		   if (finish == 0){
+                        if(node_type == HOST){
+                            //std::cout << "############### Host ###################" << std::endl; 
+                     	hostdetails = topology->hosts[node_id]->queue[q_id]->node_details;
+                        //std::cout <<" Host "<< hostdetails.my_type <<"\t"<< hostdetails.my_id << "\t" << hostdetails.my_sub_id << std::endl;
+                        add_to_event_queue(new FindNextHopEvent(get_current_time(),dequed_pkt, hostdetails));
+                       //typenidvector.push_back(hostdetails); 
+                        }
+                        else if(node_type == EPS) {
+                            //std::cout << "############### EPS ###################" << std::endl; 
+                     	hostdetails = topology->switches[node_id]->queues[q_id]->node_details;
+                        //std::cout <<"EPS " <<hostdetails.my_type <<"\t"<< hostdetails.my_id << "\t" << hostdetails.my_sub_id << std::endl;
+                    add_to_event_queue(new FindNextHopEvent(get_current_time(),dequed_pkt, hostdetails));
+                        }
+    
+                        else if(node_type == LINK) {
+                            std::cout << "############## Link ##################" << std::endl;
+                        }
+                }
+         }
+}
+                    /*std::cout<< "\t" << "Packet destined for different destinatione"<< std::endl;
+                         std::cout << "\t" << "hostdetails.my_id" << hostdetails.my_id << std::endl;
+                       std::cout << "\t" << "hostdetails.my_type" << hostdetails.my_type << std::endl;
+                       std::cout << "\t" << "hostdetails.src_type" << hostdetails.src_type << std::endl;
+                       std::cout << "\t" << "hostdetails.src_id" << hostdetails.src_id << std::endl;
+                       std::cout << "\t" << "hostdetails.dst_type" << hostdetails.dst_type << std::endl;
+                       std::cout << "\t" << "hostdetails.dst_id" << hostdetails.dst_id << std::endl;*/
+
+                     /*  std::cout << "\t" << "typenidvector[0].my_id"   << typenidvector[0].my_id << std::endl;
+                       std::cout << "\t" << "typenidvector[0].my_type" << typenidvector[0].my_type << std::endl;
+                       std::cout << "\t" << "typenidvector[0].src_type"<< typenidvector[0].src_type << std::endl;
+                       std::cout << "\t" << "typenidvector[0].src_id"  << typenidvector[0].src_id << std::endl;
+                       std::cout << "\t" << "typenidvector[0].dst_type"<< typenidvector[0].dst_type << std::endl;
+                       std::cout << "\t" << "typenidvector[0].dst_id"  << typenidvector[0].dst_id << std::endl;*/
+
+              /*     if((dequed_pkt->dst->id != queue->src->id)&& (queue->dst->type != HOST)) 
+                {
+                    std::cout<<"Packet destined for different destinatione"<< std::endl;
+		            uint32_t next_hop = topology->get_next_hop(packet,queue);
+                    
+                    std::cout << "next_hop @ service event is " << next_hop << std::endl;
+                    add_to_event_queue(new PacketEnteringLinkEvent(get_current_time(),dequed_pkt,next_hop));
+                    //add_to_event_queue(new PacketPushingEvent(get_current_time()+pd+td,dequed_pkt, topology->slinks[next_hop]));
+		   
+             
+               if((dequed_pkt->dst->id == queue->id) && (queue->dst->type == HOST)){ 
+                     dequed_pkt->m_lbl_time = get_current_time();
+                     dequed_pkt->m_fbl_time = get_current_time() - output_packet_size_in_time;
+                     }
+                }
+                //if((dequed_pkt->dst->id != queue->id) && (queue->dst->type != HOST))
+               else
+
+                {
+
+                tokens[q_id]--;
+                //std::cout <<" : <--- Check " << std::endl;
+                dequed_pkt->end_time = get_current_time(); //TODO Start time
+                dequed_pkt->lbl_time = get_current_time(); //TODO Start time
+                dequed_pkt->fbl_time = get_current_time() - output_packet_size_in_time; //TODO Start time
+	            dequed_pkt->qsize_wl =  queue->packets_in_queue;
+                dequed_pkt->dropped_pkts_wl = queue->packets_dropped; //TODO Start time 
+                dequed_pkt->m_lbl_time = get_current_time();
+                dequed_pkt->m_fbl_time = get_current_time() - output_packet_size_in_time;
+
+               if((dequed_pkt->dst->id == queue->id) && (queue->dst->type == HOST)){ 
+                     dequed_pkt->m_lbl_time = get_current_time();
+                     dequed_pkt->m_fbl_time = get_current_time() - output_packet_size_in_time;
+                     }
+    
+                 packets_for_rx_stat[q_id].push_back(dequed_pkt);
+                    std::cout<< get_current_time() <<" : <--- Packet dequed "<< dequed_pkt->seq_no << std::endl;
+                if(params.debug==1){
+                    std::cout<< get_current_time() <<" : <--- Packet dequed "<< dequed_pkt->seq_no << std::endl;
+                     }
+
+                    }
+        }
+
 		else{	
-			//std::cout<<"Queue is empty or no schedule tokens"<< std::endl;
-            }
-    //std::cout<< get_current_time() <<" : Packet Service Event "<< topology->myq[0]->getsize() << std::endl;
-
-   //std::cout<< "s\t" << get_current_time() <<"\t" << topology->myq[0]->bytes_in_queue << "\t" << topology->myq[0]->pkt_drop<< std::endl;
-   
-
-   std::cout<< "d\t" << q_id << "\t"<< get_current_time() <<"\t" << topology->myq[q_id]->bytes_in_queue << "\t" << topology->myq[q_id]->packets_in_queue<<"\t" << topology->myq[q_id]->bytes_dropped<<"\t" << topology->myq[q_id]->packets_dropped <<std::endl;
+			std::cout<<"Queue is empty or no schedule tokens"<< std::endl;
+            }*/
+  
 
 
-    if(params.debug==1){
 
-        topology->myq[0]->getsize();
-        std::cout << " AT PACKET_SERVICE <<< Packets sent from Host: "<< packet->src->id << " to Host: " <<packet->dst->id <<" with size "<< packet->size << ", sequence number " << packet->seq_no <<" priority "<< packet->pf_priority <<" and sending time of "<< packet->sending_time<<  std::endl;
-      
-    }
-//	double tnext = time + 10;
-//	add_to_event_queue(new PacketArrivalEvent(tnext, packet)); 
-}
+//---- Constructors and methods for FindNextHopEvent ------------
 
-//---- Constructors and methods for PacketArrivalEvent ------------
-
-PacketArrivalEvent::PacketArrivalEvent(
+FindNextHopEvent::FindNextHopEvent(
 	double time, 
-	Packet *packet
-	): event(PACKET_ARRIVAL, time) {
+	Packet *packet,
+	Queue::typenid node_details
+	): event(NEXT_HOP_EVENT, time) {
     this->packet = packet;
-	// Have to write my code here
-
+    local_node_details = node_details;
+    //this->node_details = node_details;
+    //std::cout <<"Nodeeeeeeeeeeeeeeeeeeeee details " << node_details.dst_type << std::endl ;
+//    Queue::typenid dup = node_details ;
+    //std::cout <<"Nodeeeeeeeeeeeeeeeeeeeee details local " << local_node_details.dst_type << std::endl ;
+//    this->node_details = node_details;
 	}
 
-PacketArrivalEvent::~PacketArrivalEvent(){}
+FindNextHopEvent::~FindNextHopEvent(){}
 
+void FindNextHopEvent::printdetails(){
+    //std::cout <<"Nodeeeeeeeeeeeeeeeeeeeee details local " << local_node_details.src_type << std::endl ;
 
-void PacketArrivalEvent::process_event(){
+}
+
+void FindNextHopEvent::process_event(){
+/*                       std::cout << "\t" << "hostdetails.my_id" << hostdetails.my_id << std::endl;
+                       std::cout << "\t" << "hostdetails.my_type" << hostdetails.my_type << std::endl;
+                       std::cout << "\t" << "hostdetails.src_type" << hostdetails.src_type << std::endl;
+                       std::cout << "\t" << "hostdetails.src_id" << hostdetails.src_id << std::endl;
+                       std::cout << "\t" << "hostdetails.dst_type" << hostdetails.dst_type << std::endl;
+                       std::cout << "\t" << "hostdetails.dst_id" << hostdetails.dst_id << std::endl;
+*/
+
 
 	// Write code here
+   uint32_t q_id = packet->qid;
+   //FindNextHopEvent::printdetails(local_node_details);
+   //std::cout << "Find Next Hop Event" << std::endl;
+    //std::cout << "\t" << "packet->dst->id : " << packet->dst->id <<" local_node_details.dst_id : "<< local_node_details.dst_id << " local_node_details.dst_type : "<< local_node_details.dst_type << " local_node_details.src_id : "<< local_node_details.src_id << " local_node_details.src_type : "<< local_node_details.src_type << std::endl;
+   double output_packet_size_in_time = (1.0/double(params.output_work_rate))* ceil(double(params.packet_size)/double(params.output_bus_width));
+   // std::cout << "\t" << "packet->dst->id : " << packet->dst->id <<" node_details.dst_id : "<< local_node_details.dst_id << " node_details.dst_type : "<< local_node_details.dst_type << std::endl;
+    if((packet->dst->id == local_node_details.dst_id) && (local_node_details.dst_type == HOST)){ //TODO change 
+                //std::cout << "\t" << "MACHIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII" << std::endl;
+	add_to_event_queue(new PacketPushingEvent(get_current_time(), packet, topology->hosts[packet->dst->id]->queue[0]));
+                    }  
 
-	std::cout<< get_current_time() <<" Packet Arrival Event"<< std::endl;
+    else 
+            {
+                   // std::cout<< "\t" << "Packet destined for different"<< std::endl;
+		            Queue::typenid next_hop = topology->get_next_hop(get_current_time(),packet,local_node_details);
+                       /* std::cout << "\t"<< "next_hop.my_id"   << next_hop.my_id << std::endl;
+                       std::cout << "\t" << "next_hop.my_type" << next_hop.my_type << std::endl;
+                       std::cout << "\t" << "next_hop.src_type"<< next_hop.src_type << std::endl;
+                       std::cout << "\t" << "next_hop.src_id"  << next_hop.src_id << std::endl;
+                       std::cout << "\t" << "next_hop.dst_type"<< next_hop.dst_type << std::endl;
+                       std::cout << "\t" << "next_hop.dst_id"  << next_hop.dst_id << std::endl;*/
 
-    if(params.debug==1){
+                   
+                    //std::cout << "\t" << "next_hop @ service event is " << next_hop << std::endl;
+                    if(next_hop.my_type == LINK){
+                    //std::cout<<"******@@@@@@@@@@@@@@@@^^^^^^^^^^^^^^^^"<< std::endl;
+                    add_to_event_queue(new PacketEnteringLinkEvent(get_current_time(),packet,next_hop));
+                    }
 
-        std::cout << " AT PACKET_ARRIVAL <<< Packets sent from Host: "<< packet->src->id << " to Host: " <<packet->dst->id <<" with size "<< packet->size << ", sequence number " << packet->seq_no <<" priority "<< packet->pf_priority <<" and sending time of "<< packet->sending_time<<  std::endl;
-      
-    packet->src->queue->enque(packet);
-    //packet->src->queue->getsize();
+                    else if(next_hop.my_type == EPS){
+                    //std::cout<<"******++++++++++++++++^^^^^^^^^^^^^^^^"<< std::endl;
+                    add_to_event_queue(new PacketEnteringSwitchEvent(get_current_time(),packet,next_hop)); 
+                    }
+
+                    //add_to_event_queue(new PacketPushingEvent(get_current_time()+pd+td,dequed_pkt, topology->slinks[next_hop]));
+	              }	   
+             
+     //else if((packet->dst->id == queue->id) && (queue->dst->type == NULL)){ // destination 
+/*               if((dequed_pkt->dst->id == queue->id) && (queue->dst->type == HOST)){ 
+                     dequed_pkt->m_lbl_time = get_current_time();
+                     dequed_pkt->m_fbl_time = get_current_time() - output_packet_size_in_time;
+                     }
+    
+                 packets_for_rx_stat[q_id].push_back(dequed_pkt);
+                    std::cout<< get_current_time() <<" : <--- Packet dequed "<< dequed_pkt->seq_no << std::endl;
+
+
+     }*/
+   //std::cout<< "d\t" << q_id << "\t"<< get_current_time() <<"\t" << queue->bytes_in_queue << "\t" << queue->packets_in_queue<<"\t" << queue->bytes_dropped<<"\t" << queue->packets_dropped <<std::endl;
+
+
 
 }
-    double tnext = time + 10;
-	add_to_event_queue(new PacketDepartureEvent(tnext, packet)); 
-}
 
 
-//---- Constructors and methods for PacketDepartureEvent ------------
 
-PacketDepartureEvent::PacketDepartureEvent(
+//---- Constructors and methods for PacketEnteringLinkEvent ------------
+
+PacketEnteringLinkEvent::PacketEnteringLinkEvent(
 	double time, 
-	Packet *packet
-	): event(PACKET_DEPARTED, time) {
-	this->packet = packet;    
+	Packet *packet,
+    	Queue::typenid next_hop
+	): event(PACKET_ARRIVAL_AT_LINK, time) {
+    this->packet = packet;
+    local_node_details = next_hop;
+	// Have to write my code here
+
+    //std::cout <<"Nodeeeeee*************************** details " << next_hop.dst_type << std::endl ;
+	}
+
+PacketEnteringLinkEvent::~PacketEnteringLinkEvent(){}
+
+
+void PacketEnteringLinkEvent::process_event(){
+
+	// Write code here
+   //Queue::typenid next_hop = next_hop ;
+   uint32_t node_type = local_node_details.my_type;
+   uint32_t node_id = local_node_details.my_id;
+   uint32_t q_id = local_node_details.my_sub_id;
+   /*std::cout << "Packet Entering Link Event" << std::endl;
+   std::cout << "\t" << "next_hop.my_id" << local_node_details.my_id << std::endl;
+   std::cout << "\t" << "next_hop.src_type" << local_node_details.src_type << std::endl;
+   std::cout << "\t" << "next_hop.src_id" << local_node_details.src_id << std::endl;
+   std::cout << "\t" << "next_hop.dst_type" << local_node_details.dst_type << std::endl;
+   std::cout << "\t" << "next_hop.dst_id" << local_node_details.dst_id << std::endl;*/
+   double linkdelay = topology->slinks[q_id]->td;
+
+   //std::cout << "\t" << "linkdelay" << linkdelay << std::endl;
+
+   std::cout<< "le\t" << node_type << node_id << q_id << "\t"<< get_current_time() <<"\t" << topology->hosts[node_id]->queue[q_id]->bytes_in_queue << "\t" << topology->hosts[node_id]->queue[q_id]->packets_in_queue<<"\t" << topology->hosts[node_id]->queue[q_id]->bytes_dropped<<"\t" << topology->hosts[node_id]->queue[q_id]->packets_dropped <<std::endl;
+   //std::cout<< "le\t" << node_type <<"\t" << node_id << "\t" << q_id << "\t"<< get_current_time() <<"\t" << topology->hosts[node_id]->queue[q_id]->bytes_in_queue << "\t" << topology->hosts[node_id]->queue[q_id]->packets_in_queue<<"\t" << topology->hosts[node_id]->queue[q_id]->bytes_dropped<<"\t" << topology->hosts[node_id]->queue[q_id]->packets_dropped <<std::endl;
+
+   // std::cout << "----------------------------------------------------------------------------" << std::endl;
+   //add_to_event_queue(new PacketDepartingLinkEvent(get_current_time()+topology->slinks[next_hop.my_id]->totd, packet,next_hop ));
+   add_to_event_queue(new PacketDepartingLinkEvent(get_current_time()+10, packet, local_node_details ));
+}
+
+
+//---- Constructors and methods for PacketDepartingLinkEvent ------------
+
+PacketDepartingLinkEvent::PacketDepartingLinkEvent(
+	double time, 
+	Packet *packet,
+	Queue::typenid next_hop
+	): event(PACKET_DEPARTED_FROM_LINK, time) {
+	this->packet = packet;
+	local_node_details = next_hop;    
 	// Have to write my code here
 
 	}
 
-PacketDepartureEvent::~PacketDepartureEvent(){}
+PacketDepartingLinkEvent::~PacketDepartingLinkEvent(){}
 
 
-void PacketDepartureEvent::process_event(){
+void PacketDepartingLinkEvent::process_event(){
 
-	// Write code here
-	std::cout<< get_current_time() <<" Packet Departure Event"<< std::endl; 
-    if(params.debug==1){
+    //Queue::typenid local_node_details = next_hop ;
+     uint32_t node_type = local_node_details.my_type;
+     uint32_t node_id = local_node_details.my_id;
+     uint32_t q_id = local_node_details.my_sub_id;
+           
 
-        std::cout << " AT PACKET_DEPARTURE <<< Packets sent from Host: "<< packet->src->id << " to Host: " <<packet->dst->id <<" with size "<< packet->size << ", sequence number " << packet->seq_no <<" priority "<< packet->pf_priority <<" and sending time of "<< packet->sending_time<<  std::endl;
-      
-       }
+   //std::cout << "Packet Departing Link Event" << std::endl;
+     std::cout<< "ll\t" << node_type << node_id << q_id << "\t"<<"\t" << topology->hosts[node_id]->queue[q_id]->bytes_in_queue << "\t" << topology->hosts[node_id]->queue[q_id]->packets_in_queue<<"\t" << topology->hosts[node_id]->queue[q_id]->bytes_dropped<<"\t" << topology->hosts[node_id]->queue[q_id]->packets_dropped <<std::endl;
+     //std::cout<< "ll\t" << node_type <<"\t" << node_id << "\t" << q_id << "\t"<<"\t" << topology->hosts[node_id]->queue[q_id]->bytes_in_queue << "\t" << topology->hosts[node_id]->queue[q_id]->packets_in_queue<<"\t" << topology->hosts[node_id]->queue[q_id]->bytes_dropped<<"\t" << topology->hosts[node_id]->queue[q_id]->packets_dropped <<std::endl;
+  
+	add_to_event_queue(new FindNextHopEvent(get_current_time(), packet, local_node_details)); 
 
-    Packet *popped_pkt;
-    popped_pkt = packet->src->queue->deque();
-    //packets_to_switch.push_back(popped_pkt);
-    std::cout << "PACKETS_TO_SWITCH " <<packets_to_switch.size() << std::endl;
-    //packet->src->queue->getsize();
-
-    double tnext = time + 100;
-    add_to_event_queue(new PacketArrivalAtSwitch(tnext, packet));
 }
 
-//---------- Constructor and methods for PacketArrivalAtSwitch event -------
+//---------- Constructor and methods for PacketEnteringSwitchEvent event -------
 
 
-PacketArrivalAtSwitch::PacketArrivalAtSwitch(
+PacketEnteringSwitchEvent::PacketEnteringSwitchEvent(
         double time,
-        Packet *packet
+        Packet *packet,
+        Queue::typenid next_hop
         ): event(PACKET_ARRIVAL_AT_SWITCH, time) {
         this->packet = packet;
-        // Have to write my code here
+        local_node_details = next_hop;
+
+        }
+
+PacketEnteringSwitchEvent::~PacketEnteringSwitchEvent(){}
+void PacketEnteringSwitchEvent::process_event(){
+
+    //std::cout<< get_current_time() <<" Packets Entering the Switch"<< std::endl; 
+    uint32_t node_id = local_node_details.my_id;
+    uint32_t q_id = local_node_details.my_sub_id;
+
+    std::cout<< node_id << "\t" << q_id << std::endl; 
+	add_to_event_queue(new PacketPushingEvent(get_current_time(), packet, topology->switches[node_id]->queues[q_id]));
+}
+
+//---------- Constructor and methods for PacketDepartingSwitchEvent event -------
+
+
+PacketDepartingSwitchEvent::PacketDepartingSwitchEvent(
+        double time,
+        Packet *packet,
+        Queue::typenid next_hop
+        ): event(PACKET_DEPARTURE_FROM_SWITCH, time) {
+        this->packet = packet;
+        local_node_details = next_hop;
 
         }
 
 
 
-PacketArrivalAtSwitch::~PacketArrivalAtSwitch(){}
-void PacketArrivalAtSwitch::process_event(){
+PacketDepartingSwitchEvent::~PacketDepartingSwitchEvent(){}
+void PacketDepartingSwitchEvent::process_event(){
 	// Have to write my code here
-
-	std::cout<<get_current_time() <<" Packet Arrival at Switch  HHH "<< std::endl; 
-    if(params.debug==1){
-
-        std::cout << " AT PACKET_ARRIVAL_SWITCH <<< Packets sent from Host: "<< packet->src->id << " to Host: " <<packet->dst->id <<" with size "<< packet->size << ", sequence number " << packet->seq_no <<" priority "<< packet->pf_priority <<" and sending time of "<< packet->sending_time<<  std::endl;
-      }
-
-
-    std::cout << "PACKETS_TO_SWITCH_SIZE" << packets_to_switch.size() << std::endl;
-//    for(uint32_t i=0;i<packets_to_switch.size();i++){
-//    if(packets_to_switch.size() > 0){
-      //  std::cout << "*" << std::endl;
-      //  the_switch->queues[p->dst->id]
-    Packet *popped_pkt;
-    //popped_pkt = packets_to_switch[0];
-    //std::cout << "MARK ---> "<< popped_pkt->size << std::endl;
-    /*topology->switches[0]->queues[popped_pkt->dst->id]->enque(popped_pkt);
-    std::cout <<topology->switches[0]->queues[popped_pkt->dst->id]->bytes_in_queue << std::endl;
-    std::cout << "MARK ---> "<< popped_pkt->dst->id << std::endl;*/
-    //}
-   // }
-    if(params.debug ==1){
-
-    for(uint32_t i=0;i<10;i++){
-   std::cout << "TOPOLOGY DETAILS " << topology->num_hosts << " VOQ " << i << " HAS "<< topology->switches[0]->queues[i]->bytes_in_queue << " PACKETS" << std::endl;
+	
+    std::cout<< get_current_time() <<" Packet Departure from Switch"<< std::endl; 
     }
-    }
-    double tnext = time + 10;
-    add_to_event_queue(new SwitchArbitration(tnext, packet));
-}
 
-//---------- Constructor and methods for PacketArrivalAtSwitch event -------
+
+
+//---------- Constructor and methods for Switch Arbitration event -------
 
 
 SwitchArbitration::SwitchArbitration(
@@ -448,41 +679,11 @@ void SwitchArbitration::process_event(){
       
 }
     double tnext = time + 10;
-    add_to_event_queue(new PacketDepartureFromSwitch(tnext, packet));
+//    add_to_event_queue(new PacketDepartingSwitchEvent(tnext, packet));
 }
 
 
 
-
-//---------- Constructor and methods for PacketDepartureFromSwitch event -------
-
-
-PacketDepartureFromSwitch::PacketDepartureFromSwitch(
-        double time,
-        Packet *packet
-        ): event(PACKET_DEPARTURE_FROM_SWITCH, time) {
-        this->packet = packet;
-        // Have to write my code here
-
-        }
-
-
-
-PacketDepartureFromSwitch::~PacketDepartureFromSwitch(){}
-void PacketDepartureFromSwitch::process_event(){
-	// Have to write my code here
-	
-    std::cout<< get_current_time() <<" Packet Departure from Switch"<< std::endl; 
-    if(params.debug==1){
-
-        std::cout << " AT PACKET_DEPARTURE_FROM_SWITCH <<< Packets sent from Host: "<< packet->src->id << " to Host: " <<packet->dst->id <<" with size "<< packet->size << ", sequence number " << packet->seq_no <<" priority "<< packet->pf_priority <<" and sending time of "<< packet->sending_time<<  std::endl;
-      
-    }
-  
-    //  double tnext = time + 10;
-//    add_to_event_queue(new PacketArrivalAtSwitch(tnext, p1));
-
-}
 
 
 LoggingEvent::LoggingEvent(double time) : event(LOGGING, time){
@@ -508,29 +709,30 @@ void LoggingEvent::process_event() {
     double accumulated_qsize_we = 0;
     double accumulated_qsize_wl = 0;
 
-    //double min_qsize_we = 0;
-    //double min_qsize_wl = 0;
-
-    //double max_qsize_we = 0;
-    //double max_qsize_wl = 0;
-
+    std::cout << "events_stop 1" << std::endl; 
+     
     std::cout << "\n************************************"<< std::endl;
-    std::cout << "--- Received Packet log ---"<< std::endl;
+    std::cout << "--- Received Packet log (MAIN) ---"<< std::endl;
     std::cout << "***********************************\n"<< std::endl;
     
    std::cout<<"sn : serial number"<<"\n"<< "size : packet size "<<"\n" <<"fbe : first bit of packet entering time"<<"\n" <<"lbe  : last bit of packet entering time "<<"\n" <<"fbl  : first bit of packet leaving time "<<"\n" <<"lbl : last bit of packet leaving time "<<"\n" <<"latency: lbl - lbe "<<"\n" <<std::endl;
     std::cout<< "sn" << "\t" << "size" <<"\t" << "fbe" << "\t" << "lbe" << "\t" << "fbl" << "\t" << "lbl"<< "\t"<< "latency"<< std::endl;
 
-   for (int i=0;i<params.num_hosts;i++){
+   //for (int i=0;i<params.num_hosts;i++){
+   for (int i=0;i<2;i++){
     std::cout << "log_rx_packets_start_queue "<<i <<std::endl;
          for (uint32_t j = 0; j < packets_for_rx_stat[i].size(); j++){
-            latency =  packets_for_rx_stat[i][j]->lbl_time - packets_for_rx_stat[i][j]->lbe_time;
+            latency =  packets_for_rx_stat[i][j]->m_lbl_time - packets_for_rx_stat[i][j]->m_lbe_time;
+            //std::cout << latency <<  packets_for_rx_stat[i][j]->m_lbl_time << packets_for_rx_stat[i][j]->m_lbe_time<< std::endl;
             accumulated_latency += latency;
             accumulated_size += packets_for_rx_stat[i][j]->size;
 
-            std::cout<< packets_for_rx_stat[i][j]->seq_no <<"\t"<< packets_for_rx_stat[i][j]->size << "\t"<< packets_for_rx_stat[i][j]->fbe_time << "\t" << packets_for_rx_stat[i][j]->lbe_time << "\t" << packets_for_rx_stat[i][j]->fbl_time << "\t" << packets_for_rx_stat[i][j]->lbl_time <<"\t" << latency <<"\t"<< packets_for_rx_stat[i][j]->qsize_we <<"\t"<<packets_for_rx_stat[i][j]->qsize_wl << "\t"<< packets_for_rx_stat[i][j]->dropped_pkts_we<< "\t" << packets_for_rx_stat[i][j]->dropped_pkts_wl<<std::endl;
+            std::cout<< packets_for_rx_stat[i][j]->seq_no <<"\t"<< packets_for_rx_stat[i][j]->size << "\t"<< packets_for_rx_stat[i][j]->m_fbe_time << "\t" << packets_for_rx_stat[i][j]->m_lbe_time << "\t" << packets_for_rx_stat[i][j]->m_fbl_time << "\t" << packets_for_rx_stat[i][j]->m_lbl_time <<"\t" << latency << "\t"<< packets_for_rx_stat[i][j]->qsize_we <<"\t"<<packets_for_rx_stat[i][j]->qsize_wl << "\t"<< packets_for_rx_stat[i][j]->dropped_pkts_we<< "\t" << packets_for_rx_stat[i][j]->dropped_pkts_wl<<std::endl;
 
+//std::cout<< packets_for_rx_stat[i][j]->seq_no <<"\t"<< packets_for_rx_stat[i][j]->size << "\t"<< packets_for_rx_stat[i][j]->fbe_time << "\t" << packets_for_rx_stat[i][j]->lbe_time << "\t" << packets_for_rx_stat[i][j]->fbl_time << "\t" << packets_for_rx_stat[i][j]->lbl_time <<"\t" << latency <<"\t"<< packets_for_rx_stat[i][j]->qsize_we <<"\t"<<packets_for_rx_stat[i][j]->qsize_wl << "\t"<< packets_for_rx_stat[i][j]->dropped_pkts_we<< "\t" << packets_for_rx_stat[i][j]->dropped_pkts_wl<<std::endl;
          }
+   
+        
 
     std::cout << "log_rx_packets_end_queue "<< i << std::endl;
     std::cout << "\n************************************"<< std::endl;
@@ -546,120 +748,32 @@ void LoggingEvent::process_event() {
     accumulated_size = 0;
  
     }
-
-    
-    
-    /* 
-    std::cout<< "sn" << "\t" << "size" <<"\t" << "start" << "\t" << "end" << "\t" << "lat" << "\t" << "qsize_we"<< "\t"<< "qsize_wl"<< std::endl;
-    std::cout << "log_rx_packets_start"<< std::endl;
-    for(it = packets_for_rx_stats.begin(); it != packets_for_rx_stats.end(); ++it) {
-        std::cout << *it; ... 
-        latency = (*it)->end_time - (*it)->start_time;
-        accumulated_size += (*it)->size;
-        accumulated_latency += latency;
-	accumulated_qsize_we += (*it)->qsize_we;
-	accumulated_qsize_wl += (*it)->qsize_wl;
-
-        std::cout<< (*it)->seq_no << "\t"<< (*it)->size << "\t" << (*it)->start_time << "\t" << (*it)->end_time << "\t" << latency <<"\t" << (*it)->qsize_we <<"\t" << (*it)->qsize_wl <<std::endl;
-    }
-
-    std::cout << "log_rx_packets_end"<< std::endl;
-	auto min_qsize_we = std::min_element(packets_for_rx_stats.begin(),packets_for_rx_stats.end(),
-						[](const Packet* a, const Packet* b )
-                             {
-                                 return a->qsize_we < b->qsize_we;
-                             } );
-	double min_entering = (*min_qsize_we)->qsize_we ;
-       
-	auto max_qsize_we = std::min_element(packets_for_rx_stats.begin(),packets_for_rx_stats.end(),
-						[](const Packet* a, const Packet* b )
-                             {
-                                 return a->qsize_we > b->qsize_we;
-                             } );
-	double max_entering = (*max_qsize_we)->qsize_we ;
-
-	auto min_qsize_wl = std::min_element(packets_for_rx_stats.begin(),packets_for_rx_stats.end(),
-						[](const Packet* a, const Packet* b )
-                             {
-                                 return a->qsize_wl < b->qsize_wl;
-                             } );
-	double min_leaving = (*min_qsize_wl)->qsize_wl ;
-       
-	auto max_qsize_wl = std::min_element(packets_for_rx_stats.begin(),packets_for_rx_stats.end(),
-						[](const Packet* a, const Packet* b )
-                             {
-                                 return a->qsize_wl > b->qsize_wl;
-                             } );
-	double max_leaving = (*max_qsize_wl)->qsize_wl ;
-
-
-	 //min_qsize_wl = std::min_element(packets_for_rx_stats.begin(),packets_for_rx_stats.end());
-        //max_qsize_we = std::max_element(packets_for_rx_stats.begin(),packets_for_rx_stats.end());
-        //max_qsize_wl = std::max_element(packets_for_rx_stats.begin(),packets_for_rx_stats.end());
-
-   packets_dropped = params.num_packets_to_run - packets_for_rx_stats.size() ; 
-    std::cout << "\n************************************"<< std::endl;
-    std::cout << "--- Received Packet Statistics ---"<< std::endl;
-    std::cout << "***********************************\n"<< std::endl;
-    std::cout<< "Number of packets sent : " << params.num_packets_to_run << std::endl;
-    std::cout<< "Number of packets received : " << packets_for_rx_stats.size() << std::endl;
-    std::cout<< "Number of packets dropped : " << packets_dropped << std::endl;
-    std::cout<< "Average packets size : " << accumulated_size/packets_for_rx_stats.size() << std::endl;
-    std::cout<< "Average packet latency : " << accumulated_latency/packets_for_rx_stats.size() << std::endl;
-    std::cout<< "Average queue size when packet enters : " << accumulated_qsize_we/packets_for_rx_stats.size() << std::endl;
-     std::cout<< "Min queue size when packet enters : " << min_entering << std::endl;
-     std::cout<< "Max queue size when packet enters : " << max_entering << std::endl;
-    std::cout<< "Average queue size when packet leaves : " << accumulated_qsize_wl/packets_for_rx_stats.size() << std::endl;
-     std::cout<< "Min queue size when packet leaves : " << min_leaving << std::endl;
-     std::cout<< "Max queue size when packet leaves : " << max_leaving << std::endl;
-
-
-    //std::cout<< "Min queue size when packet leaves : " << min_qsize_wl << std::endl;
-    //std::cout<< "Max queue size when packet enters : " << max_qsize_we << std::endl;
-    //std::cout<< "Max queue size when packet leaves : " << max_qsize_wl << std::endl;
-    //std::cout<< "Average queue size when packet leaves : " << accumulated_qsize_wl/packets_for_rx_stats.size() << std::endl;
-    //std::cout<< "Packets with following sequence numbers were dropped : "<< std::endl;
-   // uint32_t found; */
-
-
-//for(std::vector<Packet*>::iterator i = packets_for_tx_stats.begin(); i != packets_for_tx_stats.end(); ++i) {
-//    for(std::vector<Packet*>::iterator j = packets_for_rx_stats.begin(); i != packets_for_rx_stats.end(); ++j) {
-//    /* std::cout << *it; ... */
-//    if ((*i)->seq_no ==(*j)->seq_no){
-//        //found.assign((*i)->seq_no,2);
-//        std::cout << "matching seq no : "<< (*i)->seq_no << std::endl ;
-//        break;
-//        }
-//    }
-//}
-
-
-//    for(int i = 0; i < packets_for_tx_stats.size(); i++) {
-//        for(int j = 0; j < packets_for_rx_stats.size(); j++) {
-//      //  found = 0;
-//            if (packets_for_rx_stats[j]->seq_no == packets_for_tx_stats[i]->seq_no){
-//              //  found = 1;
-//                found.assign(packets_for_rx_stats[j]->seq_no,1);
-//                break;
-//                 }
-//            }
-//        }
-//    
-//    for(int i = 0 ; i != found.size(); i++){
-//            std::cout << "i: " << i  << " value is "<< found[i] << std::endl ;
-//            //std::cout <<"*i: " << i << "value: " << found[i] << std::endl ;
-//
-//        }
-//          // if( (j== packets_for_rx_stats.size()-1) && (i != packets_for_rx_stats[j]->seq_no)) {
-          //  //std::cout<< "lost seqeuence number : " << i << std::endl;
-          //  }
-          //  else {
-          //  std::cout<< "lost seqeuence number : " << i << std::endl;
-          //  }
-	//std::cout<<"Logging boss"<< std::endl; 
-	// Write logging code here
-
 }
+
+//double min_qsize_we = 0;
+    //double min_qsize_wl = 0;
+
+    //double max_qsize_we = 0;
+    //double max_qsize_wl = 0;
+
+    /*std::cout << "\n************************************"<< std::endl;
+    std::cout << "--- Received Packet log ---"<< std::endl;
+    std::cout << "***********************************\n"<< std::endl;
+    
+   std::cout<<"sn : serial number"<<"\n"<< "size : packet size "<<"\n" <<"fbe : first bit of packet entering time"<<"\n" <<"lbe  : last bit of packet entering time "<<"\n" <<"fbl  : first bit of packet leaving time "<<"\n" <<"lbl : last bit of packet leaving time "<<"\n" <<"latency: lbl - lbe "<<"\n" <<std::endl;
+    std::cout<< "sn" << "\t" << "size" <<"\t" << "fbe" << "\t" << "lbe" << "\t" << "fbl" << "\t" << "lbl"<< "\t"<< "latency"<< std::endl;
+
+   for (int i=0;i<params.num_hosts;i++){
+    std::cout << "log_rx_packets_start_queue "<<i <<std::endl;
+         for (uint32_t j = 0; j < packets_for_rx_stat[i].size(); j++){
+            latency =  packets_for_rx_stat[i][j]->lbl_time - packets_for_rx_stat[i][j]->lbe_time;
+            accumulated_latency += latency;
+            accumulated_size += packets_for_rx_stat[i][j]->size;
+
+            std::cout<< packets_for_rx_stat[i][j]->seq_no <<"\t"<< packets_for_rx_stat[i][j]->size << "\t"<< packets_for_rx_stat[i][j]->fbe_time << "\t" << packets_for_rx_stat[i][j]->lbe_time << "\t" << packets_for_rx_stat[i][j]->fbl_time << "\t" << packets_for_rx_stat[i][j]->lbl_time <<"\t" << latency <<"\t"<< packets_for_rx_stat[i][j]->qsize_we <<"\t"<<packets_for_rx_stat[i][j]->qsize_wl << "\t"<< packets_for_rx_stat[i][j]->dropped_pkts_we<< "\t" << packets_for_rx_stat[i][j]->dropped_pkts_wl<<std::endl;
+
+         }*/
+
 
 StatsEvent::StatsEvent(double time): event(STATS, time){
 
@@ -693,6 +807,7 @@ void StatsEvent::process_event() {
  
 }
 
+std::cout << "events_start 1" << std::endl;
 }
 
 

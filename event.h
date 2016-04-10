@@ -9,15 +9,15 @@
 #include "random_variable.h"
 
 
-#define PACKET_ARRIVAL 0
-#define PACKET_DEPARTED 1
+#define PACKET_ARRIVAL_AT_LINK 0
+#define PACKET_DEPARTED_FROM_LINK 1
 #define PACKET_ARRIVAL_AT_SWITCH 2
 #define PACKET_DEPARTURE_FROM_SWITCH 3
 #define PACKET_CREATION_EVENT 4
 #define SWITCH_ARBITRATION 5
 #define PACKET_SERVICE_EVENT 6
 #define PACKET_PUSHING_EVENT 7
-
+#define NEXT_HOP_EVENT 8
  
 #define LOGGING 9
 #define STATS 10
@@ -39,11 +39,55 @@ public:
   		
 };
 
-struct EventComparator {
+/*struct EventComparator {
     bool operator() (const event * left, const event * right) const {
         return left->time > right->time;
     }
+};*/
+
+
+template<typename Event>
+struct EventComparator {
+  std::less<int> time_compare; // time_type hopefully is self-describing ...
+  bool operator()(Event * left, Event * right) const {
+    if (time_compare(left->time, right->time)) {
+     // std::cout << "False Type: " << left->type << "\t" << right->type  << "\t" << "Time: " << left->time << "\t" << right->time  << " left-less " << std::endl;
+      return false;
+    }
+    if (time_compare(right->time, left->time)) {
+     // std::cout << "True Type: " << left->type << "\t" << right->type  << "\t" << "Time: " << left->time << "\t" << right->time  << "    right-less " << std::endl;
+      return true;
+    }
+     //1=arriveEvent 3=leaveEvent
+    if ((((left->type == 6) && (right->type == 7))||
+	((left->type == 7) && (right->type == 6)))&& (left->time ==right->time))
+            {
+           //std::cout << "Time is equal, need to check the events" << std::endl;
+           //std::cout << left->type << " \t "<< right->type << std::endl;
+           {
+                if((left->type == 6) && (right->type == 7)) {
+                   // std::cout << "Trigger" << std::endl;
+                //std::cout << "After" << left->type << " \t "<< right->type << std::endl;
+                    return true;
+                }
+                else { //if ((left->type == 1) && (right->type == 3))
+
+                    //std::cout << "Trigger else" << std::endl;
+                    //return false;
+                }
+                    //return false;
+          //return true;  
+            }
+
+   // if (left->type == 1 && right->type == 3) {
+     //   std::cout << "Time: " << time  << "     arriveEvent-leaveEvent: " << std::endl;
+     // return true;
+   // }
+    return false;
+  }
+}
 };
+
 
 class PacketCreationForInitializationEvent : public event {
     public:
@@ -73,47 +117,72 @@ class PacketCreationEvent : public event {
 
 class PacketPushingEvent : public event {
     public:
-        PacketPushingEvent(double time, Packet *packet);
+        PacketPushingEvent(double time, Packet *packet, Queue *queue);
         ~PacketPushingEvent();
         void process_event();
         Packet *packet;
+        Queue *queue;
 };
 
 
 class PacketServiceEvent : public event {
     public:
-        PacketServiceEvent(double time, Packet *packet);
+        PacketServiceEvent(double time, Packet *packet, Queue *queue);
         ~PacketServiceEvent();
         void process_event();
         Packet *packet;
+        Queue *queue;
 };
 
-
-
-class PacketArrivalEvent : public event {
+class FindNextHopEvent : public event {
     public:
-        PacketArrivalEvent(double time, Packet *packet);
-        ~PacketArrivalEvent();
+        FindNextHopEvent(double time, Packet *packet, Queue::typenid node_details ); 
+        ~FindNextHopEvent();
+        void printdetails();
         void process_event();
         Packet *packet;
+	    Queue::typenid local_node_details;
 };
 
-class PacketDepartureEvent : public event {
+
+class PacketEnteringLinkEvent : public event {
     public:
-        PacketDepartureEvent(double time, Packet *packet);
-        ~PacketDepartureEvent();
+        PacketEnteringLinkEvent(double time, Packet *packet, Queue::typenid next_hop);
+        ~PacketEnteringLinkEvent();
         void process_event();
         Packet *packet;
+        Queue::typenid local_node_details;
 };
 
-class PacketArrivalAtSwitch : public event {
+class PacketDepartingLinkEvent : public event {
     public:
-        PacketArrivalAtSwitch(double time, Packet *packet);
-        ~PacketArrivalAtSwitch();
+        PacketDepartingLinkEvent(double time, Packet *packet, Queue::typenid next_hop);
+        ~PacketDepartingLinkEvent();
         void process_event();
         Packet *packet;
+        Queue::typenid local_node_details;
 
 };
+
+class PacketEnteringSwitchEvent : public event {
+    public:
+        PacketEnteringSwitchEvent(double time, Packet *packet, Queue::typenid next_hop);
+        ~PacketEnteringSwitchEvent();
+        void process_event();
+        Packet *packet;
+        Queue::typenid local_node_details;
+
+};
+
+class PacketDepartingSwitchEvent : public event {
+    public:
+        PacketDepartingSwitchEvent(double time, Packet *packet, Queue::typenid next_hop);
+        ~PacketDepartingSwitchEvent();
+        void process_event();
+        Packet *packet;
+        Queue::typenid local_node_details;
+};
+
 
 class SwitchArbitration : public event {
     public:
@@ -124,15 +193,6 @@ class SwitchArbitration : public event {
 
 };
 
-
-class PacketDepartureFromSwitch : public event {
-    public:
-        PacketDepartureFromSwitch(double time, Packet *packet);
-        ~PacketDepartureFromSwitch();
-        void process_event();
-        Packet *packet;
-
-};
 
 
 // Have to declare all my events here 

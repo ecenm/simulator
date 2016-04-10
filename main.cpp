@@ -36,7 +36,8 @@ double start_time = 0 ;
 //uint32_t count = 0;
 
 Topology* topology;
-std::priority_queue<event*, std::vector<event*>, EventComparator> event_queue;
+//std::priority_queue<event*, std::vector<event*>, EventComparator> event_queue;
+std::priority_queue<event*, std::vector<event*>, EventComparator<event> > event_queue;
 std::deque<Packet*> packets_to_schedule;
 //std::vector<Packet*> packets_to_switch;
 std::deque<event*> packet_arrivals;

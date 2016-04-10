@@ -200,6 +200,12 @@ void read_experiment_parameters(std::string conf_filename, uint32_t exp_type) {
         else if (key == "num_hosts") {
             lineStream >> params.num_hosts;
         }
+        else if (key == "nqph") {
+            lineStream >> params.nqph;
+        }
+        else if (key == "nqps") {
+            lineStream >> params.nqps;
+        }
         else if (key == "permutation_tm") {
             lineStream >> params.permutation_tm;
         }

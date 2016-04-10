@@ -10,7 +10,7 @@
 class Topology{
 	public:             
         Topology();
-        virtual Queue *get_next_hop(Packet *p, Queue *q) = 0;
+        virtual Queue::typenid get_next_hop(double time, Packet *p, Queue::typenid node_details) = 0;
         virtual double get_oracle_pct(Packet* p) = 0 ;
 
         uint32_t num_hosts;
@@ -18,14 +18,17 @@ class Topology{
 
         std::vector<Host *> hosts;
         std::vector<Switch *> switches;
-        std::vector<Queue *> myq;
-
+        std::vector<FiberLink *> links;
+        std::vector<SimpleLink *> slinks;
+        std::vector<SimpleSink *> sinks;
+        //std::vector<Queue *> myq;
+        //std::vector<Server *> servers;
 };
 
 class SimpleTopology: public Topology {
     public:
         SimpleTopology(uint32_t num_hosts, double bandwidth, uint32_t queue_type, uint32_t num_myq);
-        virtual Queue *get_next_hop(Packet *p, Queue *q);
+        virtual Queue::typenid get_next_hop(double time, Packet *p, Queue::typenid node_details);
         virtual double get_oracle_pct(Packet *p);
 
         CoreSwitch* the_switch;    

@@ -83,6 +83,9 @@ class DCExpParams {
         double capability_window_timeout;
         uint32_t capability_third_level;
         uint32_t capability_fourth_level;
+        
+        uint32_t nqph;
+        uint32_t nqps;
 
         std::string interarrival_cdf;
         uint32_t num_host_types;

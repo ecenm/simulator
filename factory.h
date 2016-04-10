@@ -36,16 +36,31 @@ class Factory {
                 uint32_t queue_size, 
                 uint32_t type,
                 double drop_prob, 
-                int location
+                int location,
+                uint32_t input_bus_width,
+                uint32_t input_work_rate,
+                uint32_t output_bus_width,
+                uint32_t output_work_rate,
+                uint32_t i,
+		uint32_t host_type
                 );
 
-        static Host* get_host(
-                uint32_t id,
+        static Host *get_host(
+                uint32_t id, 
                 double rate,
-                uint32_t queue_type,
-                uint32_t host_type
+                uint32_t queue_size, 
+                uint32_t queue_type, 
+                uint32_t host_type,
+                double drop_prob, 
+                int location,
+                uint32_t input_bus_width,
+                uint32_t input_work_rate,
+                uint32_t output_bus_width,
+                uint32_t output_work_rate,
+                uint32_t nqph
                 );
- 
+
+
 };
 
 #endif

@@ -15,22 +15,26 @@ class Packet {
         Packet(double sending_time, uint32_t seq_no, uint32_t pf_priority,
                 uint32_t size, /*unsigned long long start_time, unsigned long long end_time,*/ 
 		Host *src, Host *dst);
-
-        double sending_time;
+	
+	        double sending_time;
         double starting_time;
         double departure_time;
-	double fbe_time; // first bit entering time
-	double lbe_time; // last bit entering time
-	double fbl_time; // first bit leaving time
-	double lbl_time; // last bit leaving time 
-    double qsize_we; // queue size when entering
-	double qsize_wl; // queue size when leaving
-    double qsize_we_b; // queue size when entering
-	double qsize_wl_b; // queue size when leaving
-    uint32_t qid; // queue id (location for packet to store)
-    uint32_t dropped_pkts_we;
-    uint32_t dropped_pkts_wl;
-    uint32_t seq_no;
+    	double m_fbe_time; // first bit entering time
+    	double m_lbe_time; // last bit entering time
+    	double m_fbl_time; // first bit leaving time
+    	double m_lbl_time; // last bit leaving time 
+        double fbe_time; // first bit entering time
+    	double lbe_time; // last bit entering time
+    	double fbl_time; // first bit leaving time
+    	double lbl_time; // last bit leaving time 
+        double qsize_we; // queue size when entering
+    	double qsize_wl; // queue size when leaving
+        double qsize_we_b; // queue size when entering
+    	double qsize_wl_b; // queue size when leaving
+        uint32_t qid; // queue id (location for packet to store)
+        uint32_t dropped_pkts_we;
+        uint32_t dropped_pkts_wl;
+        uint32_t seq_no;
         uint32_t pf_priority;
         uint32_t size;
     	Host *src;

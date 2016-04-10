@@ -12,6 +12,10 @@ Packet::Packet(
 	Host *src,
 	Host *dst
     ) {
+    this->m_fbe_time = m_fbe_time; // first bit entering time
+    this->m_lbe_time = m_lbe_time; // last bit entering time
+    this->m_fbl_time = m_fbl_time; // first bit leaving time
+    this->m_lbl_time = m_lbl_time; // last bit leaving time 
     this->sending_time = sending_time;
     this->seq_no = seq_no;
     this->pf_priority = pf_priority;

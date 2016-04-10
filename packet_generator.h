@@ -31,7 +31,8 @@
 
 extern Topology *topology;
 extern double current_time;
-extern std::priority_queue<event *, std::vector<event *>, EventComparator> event_queue;
+//extern std::priority_queue<event *, std::vector<event *>, EventComparator> event_queue;
+extern std::priority_queue<event*, std::vector<event*>, EventComparator<event> > event_queue;
 extern std::deque<Packet *> packets_to_schedule;
 extern std::deque<event *>  packet_arrivals;
 extern DCExpParams params;
